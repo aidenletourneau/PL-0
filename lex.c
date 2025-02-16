@@ -5,6 +5,8 @@
 #define imax 32767 /* maximum integer value */
 #define cmax 11 /* maximum number of chars for idents */
 #define strmax 256 /* maximum length of strings */
+#define MAX_TOKENS 100
+
 
 enum token_type{
     skipsym = 1, identsym = 2, numbersym = 3, plussym = 4, minussym = 5,
@@ -15,22 +17,9 @@ enum token_type{
     callsym = 27, constsym = 28, varsym = 29, procsym = 30, writesym = 31,
     readsym = 32, elsesym = 33} ;
 
-
-/* internal representation of reserved words */
-int lsym [ ] = { skipsym, identsym, numbersym, plussym, minussym,
-    multsym, slashsym, fisym, eqlsym, neqsym, lessym, leqsym, 
-    gtrsym, geqsym, lparentsym, rparentsym, commasym, semicolonsym,
-    periodsym, becomessym, beginsym, endsym, ifsym, thensym, whilesym, 
-    dosym, callsym, constsym, varsym, procsym, writesym,
-    readsym, elsesym};
-
-/* list of special symbols */
-
-
-
 typedef struct Table{
-    char lexeme[100][20];
-    int tokenType[100];
+    char lexeme[MAX_TOKENS][11];
+    int tokenType[MAX_TOKENS];
     int size;
 } Table;
 
@@ -48,7 +37,7 @@ void printTable(Table* table){
     }
 }
 
-void printTokens(char tokenList[100][256], int tokenIndex){
+void printTokens(char tokenList[MAX_TOKENS][cmax], int tokenIndex){
     printf("\n");
     for( int i = 0; i < tokenIndex; i++){
         printf("%s ", tokenList[i]);
@@ -98,15 +87,15 @@ int isWhiteSpace(char c){
 char *word [] = { "null", "begin", "call", "const", "do", "else", "end", "if",
     "odd", "procedure", "read", "then", "var", "while", "write"};
 /* Returns 1 if token is a recognized keyword, otherwise 0 */
-int isKeyword(char token[256]){
-    for( int i = 0; i < 15; i++){
+int isKeyword(char token[strmax]){
+    for( int i = 0; i < norw; i++){
         if (strcmp(word[i], token) == 0) return 1;
     }
     return 0;
 }
 
 /* Returns 1 if token is a number, otherwise 0 */
-int isNumber(char token[256]){
+int isNumber(char token[strmax]){
     for( int i = 0; token[i] != '\0'; i++){
         if (!isDigit(token[i])) return 0;
     }
@@ -114,7 +103,7 @@ int isNumber(char token[256]){
 }
 
 /* Returns 1 if token is a valid ident, otherwise 0 */
-int isIdentifier(char token[256]){
+int isIdentifier(char token[strmax]){
     if(!isLetter(token[0])) return 0; // first char is not a letter
     for( int i = 1; token[i] != '\0'; i++){
         if (!(isDigit(token[i]) || isLetter(token[i]))) return 0;
@@ -125,52 +114,46 @@ int isIdentifier(char token[256]){
 /* Returns the enum value of the keyword, otherwise 0 */
 int getKeywordNumber(char keyword[256]){
     if(strcmp("begin", keyword) == 0) return beginsym;
-    if(strcmp("end", keyword) == 0) return endsym;
-    if(strcmp("if", keyword) == 0) return ifsym;
-    if(strcmp("then", keyword) == 0) return thensym;
-    if(strcmp("while", keyword) == 0) return whilesym;
-    if(strcmp("do", keyword) == 0) return dosym;
-    if(strcmp("call", keyword) == 0) return whilesym;
-    if(strcmp("const", keyword) == 0) return whilesym;
-    if(strcmp("var", keyword) == 0) return varsym;
-    if(strcmp("procedure", keyword) == 0) return procsym;
-    if(strcmp("write", keyword) == 0) return writesym;
-    if(strcmp("read", keyword) == 0) return readsym;
+    else if(strcmp("end", keyword) == 0) return endsym;
+    else if(strcmp("if", keyword) == 0) return ifsym;
+    else if(strcmp("then", keyword) == 0) return thensym;
+    else if(strcmp("while", keyword) == 0) return whilesym;
+    else if(strcmp("do", keyword) == 0) return dosym;
+    else if(strcmp("call", keyword) == 0) return whilesym;
+    else if(strcmp("const", keyword) == 0) return whilesym;
+    else if(strcmp("var", keyword) == 0) return varsym;
+    else if(strcmp("procedure", keyword) == 0) return procsym;
+    else if(strcmp("write", keyword) == 0) return writesym;
+    else if(strcmp("read", keyword) == 0) return readsym;
     return 0;
 }
 
 /* Returns the enum value of the symbol, otherwise 0 */
 int getSymbolNumber(char symbol[3]){
     if(strcmp("null", symbol) == 0) return skipsym;
-    if(strcmp("+", symbol) == 0) return plussym;
-    if(strcmp("-", symbol) == 0) return minussym;
-    if(strcmp("*", symbol) == 0) return multsym;
-    if(strcmp("/", symbol) == 0) return slashsym;
-    if(strcmp("=", symbol) == 0) return eqlsym;
-    if(strcmp("!=", symbol) == 0) return neqsym;
-    if(strcmp("<", symbol) == 0) return lessym;
-    if(strcmp("<=", symbol) == 0) return leqsym;
-    if(strcmp(">", symbol) == 0) return gtrsym;
-    if(strcmp(">=", symbol) == 0) return geqsym;
-    if(strcmp("(", symbol) == 0) return lparentsym;
-    if(strcmp(")", symbol) == 0) return rparentsym;
-    if(strcmp(",", symbol) == 0) return commasym;
-    if(strcmp(";", symbol) == 0) return semicolonsym;
-    if(strcmp(".", symbol) == 0) return periodsym;
-    if(strcmp(":=", symbol) == 0) return becomessym;
+    else if(strcmp("+", symbol) == 0) return plussym;
+    else if(strcmp("-", symbol) == 0) return minussym;
+    else if(strcmp("*", symbol) == 0) return multsym;
+    else if(strcmp("/", symbol) == 0) return slashsym;
+    else if(strcmp("=", symbol) == 0) return eqlsym;
+    else if(strcmp("!=", symbol) == 0) return neqsym;
+    else if(strcmp("<", symbol) == 0) return lessym;
+    else if(strcmp("<=", symbol) == 0) return leqsym;
+    else if(strcmp(">", symbol) == 0) return gtrsym;
+    else if(strcmp(">=", symbol) == 0) return geqsym;
+    else if(strcmp("(", symbol) == 0) return lparentsym;
+    else if(strcmp(")", symbol) == 0) return rparentsym;
+    else if(strcmp(",", symbol) == 0) return commasym;
+    else if(strcmp(";", symbol) == 0) return semicolonsym;
+    else if(strcmp(".", symbol) == 0) return periodsym;
+    else if(strcmp(":=", symbol) == 0) return becomessym;
     return 0;
 }
 
 
 int main(int argc, char** argv){
-    int ssym[256];
-    ssym['+']=plussym; ssym['-']= minussym; ssym['*']=multsym;
-    ssym['/']=slashsym; ssym['(']=lparentsym; ssym[')']=rparentsym;
-    ssym['=']=eqlsym; ssym[',']=commasym; ssym['.']=periodsym;
-    ssym['#']=neqsym; ssym['<']=lessym; ssym['>']=gtrsym;
-    ssym['$']=leqsym; ssym['%']=geqsym; ssym[';']=semicolonsym;
 
-    char tokenList[100][256];
+    char tokenList[MAX_TOKENS][strmax];
     int tokenIndex = 0;
 
     FILE* fptr = fopen("input.txt", "r");
@@ -252,54 +235,3 @@ int main(int argc, char** argv){
 
     return 1;
 }
-
-
-
-
-
-
-
-
-
-/*
-Input: 
-        var x, y;
-        begin
-            y := 3;
-            x := y + 56;
-        end.
-
-Output: 
-
-        Source Program:
-        var x, y;
-        begin
-            y := 3;
-            x := y + 56;
-        end.
-
-        Lexeme Table:
-
-        lexeme| token type
-        var     29
-        x       2
-        ,       17
-        y       2
-        ;       18
-        begin   21
-        y       2
-        :=      20
-        3       3
-        ;       18
-        x       2
-        :=      20
-        y       2
-        +       4
-        56      3
-        ;       18
-        end     22
-        .       19
-
-        Token List:
-        29 2 x 17 2 y 18 21 2 y 20 3 3 18 2 x 20 2 y 4 3 56 18 22 19
-*/
