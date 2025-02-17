@@ -1,0 +1,57 @@
+# Homework X: PM/0
+
+## Description
+This lexical analyzer designed to separate an input program into distinct tokens and determine what kinda of token each is.
+
+## Compilation Instructions
+To compile run,
+    gcc lex.c
+while in the same directory as vm.c
+
+## Usage
+To run with the input file,
+    ./a.out <InputFileName>.txt
+Replace <InputFileName> with the file name of the instructions
+
+The output is shown in the terminal in addition to an output.txt file. 
+
+## Example
+Running with the test case given (input file is called input.txt in this case)
+
+Source Program:
+var x, y;
+begin
+    y := 3;
+    x := y + 56;
+end.
+
+Lexeme Table: 
+
+Lexeme           Token Type
+var              29   
+x                2    
+,                17   
+y                2    
+;                18   
+begin            21   
+y                2    
+:=               20   
+3                3    
+;                18   
+x                2    
+:=               20   
+y                2    
++                4    
+56               3    
+;                18   
+end              22   
+.                19   
+
+Token List: 
+29 2 x 17 2 y 18 21 2 y 20 3 3 18 2 x 20 2 y 4 3 56 18 22 19 
+
+
+## Team Information (if applicable)
+- Aiden Letourneau, ai761417@ucf.edu
+- Malik Fisher, ma671859@ucf.edu
+
