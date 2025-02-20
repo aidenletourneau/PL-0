@@ -18,10 +18,16 @@ enum token_type{
     readsym = 32, elsesym = 33, } ;
 
 typedef struct Table{
-    char lexeme[MAX_TOKENS][11];
+    char lexeme[MAX_TOKENS][strmax];
     int tokenType[MAX_TOKENS];
     int size;
 } Table;
+
+int length(char* s){
+    int i;
+    for(i = 0; s[i] != '\0'; i++);
+    return i;
+}
 
 void printProgram(FILE* fptr, FILE* output){
     fprintf(output, "Source Program:\n");
@@ -43,26 +49,26 @@ void addEntry(Table* table, char* lexeme, int value){
 
 void printTable(Table* table, FILE* output){
 
-    printf("\n%-16s|%5s\n", "Lexeme", " Token Type");
+    printf("\n%-15s|%5s\n", "lexeme", " token Type");
     fprintf(output, "\n%-16s%5s\n", "Lexeme", " Token Type");
     for(int i = 0; i < table->size; i++){
         if(table->tokenType[i] == 2 && length(table->lexeme[i]) > 11){
-            printf("%-16s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
-            fprintf(output, "%-16s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
+            printf("%-15s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
+            fprintf(output, "%-15s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
             continue;
         }
         else if(table->tokenType[i] == 3 && length(table->lexeme[i]) > 5){
-            printf("%-16s %-5s\n", table->lexeme[i], "Error: Number length too long.");
-            fprintf(output, "%-16s %-5s\n", table->lexeme[i], "Error: Number length too long.");
+            printf("%-15s %-5s\n", table->lexeme[i], "Error: Number length too long.");
+            fprintf(output, "%-15s %-5s\n", table->lexeme[i], "Error: Number length too long.");
             continue;
         }
         else if (table->tokenType[i] == 0){
-            printf("%-16s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
-            fprintf(output, "%-16s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
+            printf("%-15s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
+            fprintf(output, "%-15s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
             continue;
         }
-        printf("%-16s %-5d\n", table->lexeme[i], table->tokenType[i]);
-        fprintf(output, "%-16s %-5d\n", table->lexeme[i], table->tokenType[i]);
+        printf("%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
+        fprintf(output, "%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
     }
 }
 
@@ -155,6 +161,7 @@ int getKeywordNumber(char keyword[256]){
     else if(strcmp("procedure", keyword) == 0) return procsym;
     else if(strcmp("write", keyword) == 0) return writesym;
     else if(strcmp("read", keyword) == 0) return readsym;
+    else if(strcmp("null", keyword) == 0) return skipsym;
     return 0;
 }
 
@@ -186,7 +193,7 @@ int main(int argc, char** argv){
     char tokenList[MAX_TOKENS][strmax];
     int tokenIndex = 0;
     FILE * output = fopen("output.txt", "w");
-    FILE* fptr = fopen("input2.txt", "r");
+    FILE* fptr = fopen(argv[1], "r");
     
     
     // prints input program to both terminal and output file
@@ -348,8 +355,3 @@ int main(int argc, char** argv){
     return 1;
 }
 
-int length(char* s){
-    int i;
-    for(i = 0; s[i] != '\0'; i++);
-    return i;
-}
