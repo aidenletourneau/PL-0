@@ -392,7 +392,7 @@ int main(int argc, char** argv){
     int numTokens;
     Table table;
     FILE* outputFptr = fopen("output.txt", "w");
-    FILE* inputFptr = fopen("input2.txt", "r");
+    FILE* inputFptr = fopen(argv[1], "r");
 
 
     // ===============================RAW PROGRAM===============================
@@ -413,6 +413,7 @@ int main(int argc, char** argv){
 
     // ===============================TOKEN LIST===============================
     printTokenList(outputFptr, &table, tokenList);
+
 
     return 1;
 }
