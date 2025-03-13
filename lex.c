@@ -49,9 +49,12 @@ void addEntry(Table* table, char* lexeme, int value){
     table->size ++;
 }
 
+/* Prints Lexeme table */
 void printTable(Table* table, FILE* outputFptr){
-
-    printf("\n%-15s|%5s\n", "lexeme", " token Type");
+    fprintf(outputFptr, "\n\nLexeme Table: \n");
+    printf("\n\nLexeme Table: \n");
+    
+    printf("\n%-15s%5s\n", "lexeme", " token Type");
     fprintf(outputFptr, "\n%-16s%5s\n", "Lexeme", " Token Type");
     for(int i = 0; i < table->size; i++){
         if(table->tokenType[i] == identERRORsym){
@@ -71,13 +74,6 @@ void printTable(Table* table, FILE* outputFptr){
         }
         printf("%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
         fprintf(outputFptr, "%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
-    }
-}
-
-void printTokens(char tokenList[MAX_TOKENS][cmax], int tokenIndex){
-    printf("\n");
-    for( int i = 0; i < tokenIndex; i++){
-        printf("%s ", tokenList[i]);
     }
 }
 
@@ -188,6 +184,7 @@ int getSymbolNumber(char symbol[3]){
     return 0;
 }
 
+/* Parses full symbol */
 void symbolHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
     
     // start new token if not already in a new token 
@@ -274,7 +271,7 @@ void symbolHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_T
     (*charIndex) = 0;
 }
 
-// regex is [:number:]+
+/* Parses full number */
 void numberHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
     tokenList[(*tokenIndex)][(*charIndex)++] = c;
     c = fgetc(inputFptr);
@@ -287,8 +284,8 @@ void numberHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_T
     fseek(inputFptr, -1, SEEK_CUR); // return file pointer to new non-number character
 }
 
-
-void identHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
+/* Parses full ident or keyword */
+void identKeywordHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
 
     tokenList[(*tokenIndex)][(*charIndex)++] = c;
     c = fgetc(inputFptr);
@@ -302,23 +299,37 @@ void identHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TO
 
 }
 
+/* Generates Lexeme table based on token list */
+void generateTable(Table* table, char tokenList[MAX_TOKENS][strmax], int tokenIndex){
 
+    table->size = 0;
 
-int main(int argc, char** argv){
+    for(int i = 0; i < tokenIndex; i++){
+        if(isKeyword(tokenList[i])){
+            addEntry(table, tokenList[i], getKeywordNumber(tokenList[i]));
+        }
+        else if(isSymbol(tokenList[i][0])){
+            addEntry(table, tokenList[i], getSymbolNumber(tokenList[i]));
+        }
+        else if(isNumber(tokenList[i])){
+            if(length(tokenList[i]) > NUM_MAX) addEntry(table, tokenList[i], numERRORsym);
+            else addEntry(table, tokenList[i], 3);
+        }
+        else if(isIdentifier(tokenList[i])){
+            if(length(tokenList[i]) > cmax) addEntry(table, tokenList[i], identERRORsym);
+            else addEntry(table, tokenList[i], 2);
+        }
+        else{ // not a recognized token
+            addEntry(table, tokenList[i], invalidERRORsym);
+        }
+    }
+}
 
-    // initialize datastructures
-    char tokenList[MAX_TOKENS][strmax];
+/* Returns Number of Tokens in program */
+int tokenizeProgram(FILE* inputFptr, char tokenList[MAX_TOKENS][strmax]){
+    
+    
     int tokenIndex = 0;
-    FILE* outputFptr = fopen("output.txt", "w");
-    FILE* inputFptr = fopen("input2.txt", "r");
-    
-    
-    // ===============================RAW PROGRAM===============================
-    printProgram(inputFptr, outputFptr);
-    rewind(inputFptr);
-
-
-
     char c = fgetc(inputFptr);
     int charIndex = 0;
 
@@ -336,7 +347,7 @@ int main(int argc, char** argv){
         }        
         else if(isLetter(c)) { // could be identifier or keyword
 
-            identHandler(c, &charIndex, &tokenIndex, tokenList, inputFptr);
+            identKeywordHandler(c, &charIndex, &tokenIndex, tokenList, inputFptr);
 
         }
         else if(isWhiteSpace(c)){ // space or tab or newline
@@ -354,48 +365,54 @@ int main(int argc, char** argv){
         }
         c = fgetc(inputFptr);
     }
-    fclose(inputFptr);
+    
+    return tokenIndex;
 
-    // ===============================LEXEME TABLE===============================
-    fprintf(outputFptr, "\n\nLexeme Table: \n");
-    printf("\n\nLexeme Table: \n");
-    Table table;
-    table.size = 0;
-    for(int i = 0; i < tokenIndex; i++){
+}
 
-        if(isKeyword(tokenList[i])){
-            addEntry(&table, tokenList[i], getKeywordNumber(tokenList[i]));
-        }
-        else if(isSymbol(tokenList[i][0])){
-            addEntry(&table, tokenList[i], getSymbolNumber(tokenList[i]));
-        }
-        else if(isNumber(tokenList[i])){
-            if(length(tokenList[i]) > NUM_MAX) addEntry(&table, tokenList[i], numERRORsym);
-            else addEntry(&table, tokenList[i], 3);
-        }
-        else if(isIdentifier(tokenList[i])){
-            if(length(tokenList[i]) > cmax) addEntry(&table, tokenList[i], identERRORsym);
-            else addEntry(&table, tokenList[i], 2);
-        }
-        else{ // not a recognized token
-            addEntry(&table, tokenList[i], invalidERRORsym);
+/* Prints final parsed token list */
+void printTokenList(FILE* outputFptr, Table* table, char tokenList[MAX_TOKENS][strmax]){
+    printf("\nToken List: \n");
+    fprintf(outputFptr, "\nToken List: \n");
+
+    for(int i = 0; i < table->size; i++){
+        printf("%d ", table->tokenType[i]);
+        fprintf(outputFptr, "%d ", table->tokenType[i]);
+        if (table->tokenType[i] == identsym || table->tokenType[i] == numbersym){ // ident or number
+            printf("%s ", table->lexeme[i]);
+            fprintf(outputFptr, "%s ", table->lexeme[i]);
         }
     }
+}
+
+int main(int argc, char** argv){
+
+    // initialize datastructures
+    char tokenList[MAX_TOKENS][strmax];
+    int numTokens;
+    Table table;
+    FILE* outputFptr = fopen("output.txt", "w");
+    FILE* inputFptr = fopen("input2.txt", "r");
+
+
+    // ===============================RAW PROGRAM===============================
+    printProgram(inputFptr, outputFptr);
+    rewind(inputFptr);
+
+
+    // ===============================TOKENIZE PROGRAM===============================
+    numTokens = tokenizeProgram(inputFptr, tokenList);
+    fclose(inputFptr);
+
+
+    // ===============================LEXEME TABLE===============================
+    
+    generateTable(&table, tokenList, numTokens);
     printTable(&table, outputFptr);
     
 
     // ===============================TOKEN LIST===============================
-    printf("\nToken List: \n");
-    fprintf(outputFptr, "\nToken List: \n");
-
-    for(int i = 0; i < table.size; i++){
-        printf("%d ", table.tokenType[i]);
-        fprintf(outputFptr, "%d ", table.tokenType[i]);
-        if (table.tokenType[i] == identsym || table.tokenType[i] == numbersym){ // ident or number
-            printf("%s ", table.lexeme[i]);
-            fprintf(outputFptr, "%s ", table.lexeme[i]);
-        }
-    }
+    printTokenList(outputFptr, &table, tokenList);
 
     return 1;
 }
