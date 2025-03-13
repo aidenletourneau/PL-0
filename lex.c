@@ -6,6 +6,7 @@
 #define cmax 12 /* maximum number of chars for idents */
 #define strmax 256 /* maximum length of strings */
 #define MAX_TOKENS 1000
+#define NUM_MAX 5
 
 
 enum token_type{
@@ -15,7 +16,7 @@ enum token_type{
     semicolonsym = 18, periodsym = 19, becomessym = 20,
     beginsym = 21, endsym = 22, ifsym = 23, thensym = 24, whilesym = 25, dosym = 26,
     callsym = 27, constsym = 28, varsym = 29, procsym = 30, writesym = 31,
-    readsym = 32, elsesym = 33, } ;
+    readsym = 32, elsesym = 33, invalidERRORsym = 34, identERRORsym = 35, numERRORsym = 36 } ;
 
 typedef struct Table{
     char lexeme[MAX_TOKENS][strmax];
@@ -23,20 +24,21 @@ typedef struct Table{
     int size;
 } Table;
 
+
 int length(char* s){
     int i;
     for(i = 0; s[i] != '\0'; i++);
     return i;
 }
 
-void printProgram(FILE* fptr, FILE* output){
-    fprintf(output, "Source Program:\n");
+void printProgram(FILE* inputFptr, FILE* outputFptr){
+    fprintf(outputFptr, "Source Program:\n");
     printf("Source Program:\n");
-    char c = fgetc(fptr);
+    char c = fgetc(inputFptr);
     while(c != EOF){
         printf("%c", c);
-        fprintf(output, "%c", c);
-        c = fgetc(fptr);
+        fprintf(outputFptr, "%c", c);
+        c = fgetc(inputFptr);
     }
 }
 
@@ -47,28 +49,28 @@ void addEntry(Table* table, char* lexeme, int value){
     table->size ++;
 }
 
-void printTable(Table* table, FILE* output){
+void printTable(Table* table, FILE* outputFptr){
 
     printf("\n%-15s|%5s\n", "lexeme", " token Type");
-    fprintf(output, "\n%-16s%5s\n", "Lexeme", " Token Type");
+    fprintf(outputFptr, "\n%-16s%5s\n", "Lexeme", " Token Type");
     for(int i = 0; i < table->size; i++){
-        if(table->tokenType[i] == 2 && length(table->lexeme[i]) > 11){
+        if(table->tokenType[i] == identERRORsym){
             printf("%-15s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
-            fprintf(output, "%-15s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
+            fprintf(outputFptr, "%-15s %-5s\n", table->lexeme[i], "Error: Ident length too long.");
             continue;
         }
-        else if(table->tokenType[i] == 3 && length(table->lexeme[i]) > 5){
+        else if(table->tokenType[i] == numERRORsym){
             printf("%-15s %-5s\n", table->lexeme[i], "Error: Number length too long.");
-            fprintf(output, "%-15s %-5s\n", table->lexeme[i], "Error: Number length too long.");
+            fprintf(outputFptr, "%-15s %-5s\n", table->lexeme[i], "Error: Number length too long.");
             continue;
         }
-        else if (table->tokenType[i] == 0){
+        else if (table->tokenType[i] == invalidERRORsym){
             printf("%-15s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
-            fprintf(output, "%-15s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
+            fprintf(outputFptr, "%-15s %-5s\n", table->lexeme[i], "Error: Invalid Symbol.");
             continue;
         }
         printf("%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
-        fprintf(output, "%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
+        fprintf(outputFptr, "%-15s %-5d\n", table->lexeme[i], table->tokenType[i]);
     }
 }
 
@@ -115,7 +117,6 @@ int isWhiteSpace(char c){
     }
     return 0;
 }
-
 
 
 /* list of reserved word names */
@@ -187,133 +188,176 @@ int getSymbolNumber(char symbol[3]){
     return 0;
 }
 
+void symbolHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
+    
+    // start new token if not already in a new token 
+    if ((*charIndex) != 0) {
+        tokenList[(*tokenIndex)++][(*charIndex)] = '\0'; 
+        (*charIndex) = 0;
+    }
+
+    char nextChar;
+
+    switch(c){
+        case ':': // looking for ":="
+            if(fgetc(inputFptr) == '='){
+                tokenList[(*tokenIndex)][0] = ':';
+                tokenList[(*tokenIndex)][1] = '=';
+                tokenList[(*tokenIndex)++][2] = '\0';
+            }
+            else fseek(inputFptr, -1, SEEK_CUR);
+            break;
+        case '/': // looking for "/*"
+            if(fgetc(inputFptr) == '*'){ // we are inside a potential comment block, we will need to see if its closed
+
+                // save FILE* position in case there is no closing */
+                long pos = ftell(inputFptr);
+                
+                // looking for close comment
+                c = fgetc(inputFptr);
+                while (c != EOF){
+                    if (c == '*'){ 
+                        c = fgetc(inputFptr);
+                        if(c == '/'){ // found a closing comment
+                            return;
+                        }
+                    }
+                    else c = fgetc(inputFptr);
+                }
+                tokenList[(*tokenIndex)][0] = '/';
+                tokenList[(*tokenIndex)++][1] = '\0';
+                tokenList[(*tokenIndex)][0] = '*';
+                tokenList[(*tokenIndex)++][1] = '\0';
+                fseek(inputFptr, pos, SEEK_SET); // return opening comment
+                
+            }else {
+                tokenList[(*tokenIndex)][0] = '/';
+                tokenList[(*tokenIndex)++][1] = '\0';
+                fseek(inputFptr, -1, SEEK_CUR);
+            }
+            break;
+        case '<': // looking for "<>"
+            c = fgetc(inputFptr);
+            if(c == '>'){
+                tokenList[(*tokenIndex)][0] = '<';
+                tokenList[(*tokenIndex)][1] = '>';
+                tokenList[(*tokenIndex)++][2] = '\0';
+            }
+            else if (c == '='){ // looking for "<="
+                tokenList[(*tokenIndex)][0] = '<';
+                tokenList[(*tokenIndex)][1] = '=';
+                tokenList[(*tokenIndex)++][2] = '\0';
+            }
+            else {
+                tokenList[(*tokenIndex)][0] = '<';
+                tokenList[(*tokenIndex)++][1] = '\0';
+                fseek(inputFptr, -1, SEEK_CUR); 
+            }
+            break;
+        case '>': // looking for ">="
+            if (fgetc(inputFptr) == '='){
+                tokenList[(*tokenIndex)][0] = '>';
+                tokenList[(*tokenIndex)][1] = '=';
+                tokenList[(*tokenIndex)++][2] = '\0';
+            }
+            else {
+                tokenList[(*tokenIndex)][0] = '>';
+                tokenList[(*tokenIndex)++][1] = '\0';
+                fseek(inputFptr, -1, SEEK_CUR); 
+            }
+            break;
+        default:
+            tokenList[(*tokenIndex)][0] = c;
+            tokenList[(*tokenIndex)++][1] = '\0';
+            break;
+    }
+    (*charIndex) = 0;
+}
+
+// regex is [:number:]+
+void numberHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
+    tokenList[(*tokenIndex)][(*charIndex)++] = c;
+    c = fgetc(inputFptr);
+    while(isDigit(c)){
+        tokenList[(*tokenIndex)][(*charIndex)++] = c;
+        c = fgetc(inputFptr);
+    }
+    tokenList[(*tokenIndex)++][(*charIndex)] = '\0';
+    (*charIndex) = 0;
+    fseek(inputFptr, -1, SEEK_CUR); // return file pointer to new non-number character
+}
+
+
+void identHandler(char c, int* charIndex, int* tokenIndex, char tokenList[MAX_TOKENS][strmax], FILE* inputFptr){
+
+    tokenList[(*tokenIndex)][(*charIndex)++] = c;
+    c = fgetc(inputFptr);
+    while(isDigit(c) || isLetter(c)){
+        tokenList[(*tokenIndex)][(*charIndex)++] = c;
+        c = fgetc(inputFptr);
+    }
+    tokenList[(*tokenIndex)++][(*charIndex)] = '\0';
+    (*charIndex) = 0;
+    fseek(inputFptr, -1, SEEK_CUR); // return file pointer to new non-numberletter character
+
+}
+
+
 
 int main(int argc, char** argv){
 
+    // initialize datastructures
     char tokenList[MAX_TOKENS][strmax];
     int tokenIndex = 0;
-    FILE * output = fopen("output.txt", "w");
-    FILE* fptr = fopen(argv[1], "r");
+    FILE* outputFptr = fopen("output.txt", "w");
+    FILE* inputFptr = fopen("input2.txt", "r");
     
     
-    // prints input program to both terminal and output file
-    printProgram(fptr, output);
-    rewind(fptr);
-    char c = fgetc(fptr);
-    int i = 0;
-    
+    // ===============================RAW PROGRAM===============================
+    printProgram(inputFptr, outputFptr);
+    rewind(inputFptr);
 
+
+
+    char c = fgetc(inputFptr);
+    int charIndex = 0;
 
     // removes whitespace and separates program into tokens in the tokenList array
     while(c != EOF){
         if(isSymbol(c)){ // special symbol
-            if (i != 0) {
-                tokenList[tokenIndex++][i] = '\0'; // start new token if not already in a new token
-                i = 0;
-            }
-
-            // special cases
-            if (c == ':'){  // looking for :=
-                if(fgetc(fptr) == '='){
-                    tokenList[tokenIndex][0] = ':';
-                    tokenList[tokenIndex][1] = '=';
-                    tokenList[tokenIndex++][2] = '\0';
-                }
-                else fseek(fptr, -1, SEEK_CUR);
-            }
-            else if (c == '/'){ // looking for /*
-                if(fgetc(fptr) == '*'){ // we are inside a potential comment block, we will need to see if its closed
-                    long pos = ftell(fptr);
-                    
-                    // looking for close comment
-                    c = fgetc(fptr);
-                    while (c != EOF){
-                        if (c == '*'){
-                            if(fgetc(fptr) == '/'){ // found a closing comment
-                                goto exit_comment;
-                            }
-                            else fseek(fptr, -1, SEEK_CUR);
-                        }
-                        c = fgetc(fptr);
-                    }
-                    tokenList[tokenIndex][0] = '/';
-                    tokenList[tokenIndex++][1] = '\0';
-                    tokenList[tokenIndex][0] = '*';
-                    tokenList[tokenIndex++][1] = '\0';
-                    fseek(fptr, pos, SEEK_SET); // return opening comment
-                    
-                    
-                }else {
-                    tokenList[tokenIndex][0] = '/';
-                    tokenList[tokenIndex++][1] = '\0';
-                    fseek(fptr, -1, SEEK_CUR);
-                }
-            }
-            else if (c == '<'){  // looking for <>
-                char temp = fgetc(fptr);
-                if(temp == '>'){
-                    tokenList[tokenIndex][0] = '<';
-                    tokenList[tokenIndex][1] = '>';
-                    tokenList[tokenIndex++][2] = '\0';
-                }
-                else if (temp == '='){ // looking for <=
-                    tokenList[tokenIndex][0] = '<';
-                    tokenList[tokenIndex][1] = '=';
-                    tokenList[tokenIndex++][2] = '\0';
-                }
-                else {
-                    tokenList[tokenIndex][0] = '<';
-                    tokenList[tokenIndex++][1] = '\0';
-                    fseek(fptr, -1, SEEK_CUR); 
-                }
-            }
-            else if (c == '>'){  // looking for >=
-                if (fgetc(fptr) == '='){
-                    tokenList[tokenIndex][0] = '>';
-                    tokenList[tokenIndex][1] = '=';
-                    tokenList[tokenIndex++][2] = '\0';
-                }
-                else {
-                    tokenList[tokenIndex][0] = '>';
-                    tokenList[tokenIndex++][1] = '\0';
-                    fseek(fptr, -1, SEEK_CUR); 
-                }
-            }
-            else{
-                tokenList[tokenIndex][0] = c;
-                tokenList[tokenIndex++][1] = '\0';
-            }
-            i = 0;
-
+            
+            symbolHandler(c, &charIndex, &tokenIndex, tokenList, inputFptr);
+        
         }
-        else if(isDigit(c) || isLetter(c)) { // letter or digit
-            tokenList[tokenIndex][i++] = c;
+        else if(isDigit(c)){ // number literal
+
+            numberHandler(c, &charIndex, &tokenIndex, tokenList, inputFptr);
+
+        }        
+        else if(isLetter(c)) { // could be identifier or keyword
+
+            identHandler(c, &charIndex, &tokenIndex, tokenList, inputFptr);
+
         }
         else if(isWhiteSpace(c)){ // space or tab or newline
-            if (i != 0){
-                tokenList[tokenIndex++][i] = '\0';
-                i=0;
+            if (charIndex != 0){
+                tokenList[tokenIndex++][charIndex] = '\0';
+                charIndex = 0;
             }
         }else{ // invalid input symbol
-            if (i != 0){
-                tokenList[tokenIndex++][i] = '\0';
-                tokenList[tokenIndex][0] = c;
-                tokenList[tokenIndex++][1] = '\0';
-                i = 0;
+            if (charIndex != 0){
+                tokenList[tokenIndex++][charIndex] = '\0';
             }
-            else{
-                tokenList[tokenIndex][0] = c;
-                tokenList[tokenIndex++][1] = '\0';
-            }
+            tokenList[tokenIndex][0] = c;
+            tokenList[tokenIndex++][1] = '\0';
+            charIndex = 0;
         }
-        exit_comment:
-        c = fgetc(fptr);
+        c = fgetc(inputFptr);
     }
+    fclose(inputFptr);
 
-    fclose(fptr);
-    // tokenList;
-    
-    fprintf(output, "\n\nLexeme Table: \n");
+    // ===============================LEXEME TABLE===============================
+    fprintf(outputFptr, "\n\nLexeme Table: \n");
     printf("\n\nLexeme Table: \n");
     Table table;
     table.size = 0;
@@ -326,31 +370,32 @@ int main(int argc, char** argv){
             addEntry(&table, tokenList[i], getSymbolNumber(tokenList[i]));
         }
         else if(isNumber(tokenList[i])){
-            addEntry(&table, tokenList[i], 3);
+            if(length(tokenList[i]) > NUM_MAX) addEntry(&table, tokenList[i], numERRORsym);
+            else addEntry(&table, tokenList[i], 3);
         }
         else if(isIdentifier(tokenList[i])){
-
+            if(length(tokenList[i]) > cmax) addEntry(&table, tokenList[i], identERRORsym);
             addEntry(&table, tokenList[i], 2);
-
         }
         else{ // not a recognized token
-            addEntry(&table, tokenList[i], 0);
+            addEntry(&table, tokenList[i], invalidERRORsym);
         }
     }
-    printTable(&table, output);
+    printTable(&table, outputFptr);
     
+
+    // ===============================TOKEN LIST===============================
     printf("\nToken List: \n");
-    fprintf(output, "\nToken List: \n");
+    fprintf(outputFptr, "\nToken List: \n");
 
     for(int i = 0; i < table.size; i++){
         printf("%d ", table.tokenType[i]);
-        fprintf(output, "%d ", table.tokenType[i]);
-        if (table.tokenType[i] == 2 || table.tokenType[i] == 3){ // ident or number
+        fprintf(outputFptr, "%d ", table.tokenType[i]);
+        if (table.tokenType[i] == identsym || table.tokenType[i] == numbersym){ // ident or number
             printf("%s ", table.lexeme[i]);
-            fprintf(output, "%s ", table.lexeme[i]);
+            fprintf(outputFptr, "%s ", table.lexeme[i]);
         }
     }
-
 
     return 1;
 }
