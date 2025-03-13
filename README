@@ -6,7 +6,7 @@ This lexical analyzer designed to separate an input program into distinct tokens
 ## Compilation Instructions
 To compile run,
     gcc lex.c
-while in the same directory as vm.c
+while in the same directory as lex.c
 
 ## Usage
 To run with the input file,

@@ -375,7 +375,7 @@ int main(int argc, char** argv){
         }
         else if(isIdentifier(tokenList[i])){
             if(length(tokenList[i]) > cmax) addEntry(&table, tokenList[i], identERRORsym);
-            addEntry(&table, tokenList[i], 2);
+            else addEntry(&table, tokenList[i], 2);
         }
         else{ // not a recognized token
             addEntry(&table, tokenList[i], invalidERRORsym);
