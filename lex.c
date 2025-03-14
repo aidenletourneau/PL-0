@@ -387,7 +387,7 @@ void printTokenList(FILE* outputFptr, Table* table, char tokenList[MAX_TOKENS][s
 
 int main(int argc, char** argv){
 
-    // initialize datastructures
+    // initialize data structures
     char tokenList[MAX_TOKENS][strmax];
     int numTokens;
     Table table;
@@ -395,7 +395,7 @@ int main(int argc, char** argv){
     FILE* inputFptr = fopen(argv[1], "r");
 
 
-    // ===============================RAW PROGRAM===============================
+    // ===============================PRINT RAW PROGRAM===============================
     printProgram(inputFptr, outputFptr);
     rewind(inputFptr);
 
@@ -406,7 +406,6 @@ int main(int argc, char** argv){
 
 
     // ===============================LEXEME TABLE===============================
-    
     generateTable(&table, tokenList, numTokens);
     printTable(&table, outputFptr);
     
